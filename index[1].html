@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BinCoach — segregate, verify, earn</title>
+<meta name="description" content="BinCoach: on-device waste segregation coaching, green credits, asset cleanliness verification and a ward command dashboard. Prototype for Smart India Hackathon 2026.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d5c3f'/%3E%3Cg fill='none' stroke='%23f3f1e7' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 10h20'/%3E%3Cpath d='M8.8 10l1.5 16h11.4l1.5-16'/%3E%3Cpath d='M12.3 17.6l2.9 3.1L20.4 14'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar__inner">
+    <a class="brand" href="#" id="brandLink" aria-label="BinCoach home">
+      <span class="brand__mark" aria-hidden="true">
+        <svg width="30" height="30" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="BinCoach logo">
+          <path d="M5 9.5h22"/>
+          <path d="M12.2 9.5V5.6h7.6v3.9"/>
+          <path d="M7.8 9.5L9.4 27.4h13.2L24.2 9.5"/>
+          <path d="M12.1 17.9l3 3.2 5.4-7"/>
+        </svg>
+      </span>
+      <span>
+        <span class="brand__name">BinCoach</span>
+        <span class="brand__sub">Segregate · Verify · Earn</span>
+      </span>
+    </a>
+    <span class="topbar__spacer"></span>
+    <span class="chip" id="creditChip" aria-live="polite">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><circle cx="8" cy="8" r="6"/><path d="M8 5.2v5.6M6 7h4"/></svg>
+      <span class="num" id="creditChipValue">0</span> credits
+    </span>
+    <button class="icon-btn" id="themeToggle" type="button" aria-label="Switch to dark theme" title="Switch theme">
+      <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"></svg>
+    </button>
+  </div>
+</header>
+
+<nav class="tabs" aria-label="BinCoach sections">
+  <div class="tabs__inner" role="tablist">
+    <button class="tab" role="tab" id="tab-scan" aria-controls="view-scan" aria-selected="true" data-view="scan" type="button"><span class="tab__long">Scan &amp; Sort</span><span class="tab__short">Scan</span></button>
+    <button class="tab" role="tab" id="tab-credits" aria-controls="view-credits" aria-selected="false" data-view="credits" type="button" tabindex="-1"><span class="tab__long">Green Credits</span><span class="tab__short">Credits</span></button>
+    <button class="tab" role="tab" id="tab-clean" aria-controls="view-clean" aria-selected="false" data-view="clean" type="button" tabindex="-1"><span class="tab__long">Verified Clean</span><span class="tab__short">Clean</span></button>
+    <button class="tab" role="tab" id="tab-ward" aria-controls="view-ward" aria-selected="false" data-view="ward" type="button" tabindex="-1"><span class="tab__long">Ward Command</span><span class="tab__short">Command</span></button>
+  </div>
+</nav>
+
+<main>
+
+  <!-- ===================================================== SCAN & SORT -->
+  <section class="view" id="view-scan" role="tabpanel" aria-labelledby="tab-scan" tabindex="0">
+    <div class="view__head">
+      <h1>Point, scan, sort it right</h1>
+      <p>The classifier runs entirely inside this browser using TensorFlow.js MobileNet. Your photo is never uploaded — the prediction is mapped to the five statutory bin streams used by Indian urban local bodies.</p>
+    </div>
+
+    <div class="scanner">
+      <!-- capture column -->
+      <div>
+        <div class="stage" id="stage">
+          <video id="video" playsinline muted hidden></video>
+          <img class="preview" id="preview" alt="Captured waste item" hidden>
+          <div class="reticle" id="reticle" hidden></div>
+          <div class="stage__badge" id="stageBadge" hidden>Live camera</div>
+          <div class="stage__placeholder" id="stagePlaceholder">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.7l1.2-2h6.2l1.2 2h1.7A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5z"/>
+              <circle cx="12" cy="12.5" r="3.4"/>
+            </svg>
+            No image yet. Start the camera, upload a photo, or load one of the seven built-in sample items.
+          </div>
+        </div>
+
+        <div class="scan-actions">
+          <button class="btn btn--primary" id="btnCamera" type="button">Start camera</button>
+          <button class="btn btn--primary" id="btnCapture" type="button" hidden>Capture &amp; classify</button>
+          <label class="btn btn--ghost" for="fileInput">Upload photo</label>
+          <input id="fileInput" class="sr" type="file" accept="image/*">
+          <button class="btn btn--ghost" id="btnSamples" type="button" aria-expanded="true" aria-controls="sampleTray">Try a sample</button>
+        </div>
+
+        <div id="cameraMsg" hidden></div>
+
+        <div id="sampleTray" class="sample-tray">
+          <p class="label">Built-in sample items</p>
+          <div class="sample-grid" id="sampleGrid"></div>
+        </div>
+
+        <div class="note" style="margin-top:var(--space-4)">
+          Model status: <strong id="modelStatus">loading MobileNet from CDN…</strong>
+          <span id="modelStatusHint"></span>
+        </div>
+      </div>
+
+      <!-- result column -->
+      <div class="result">
+        <div class="card" id="resultCard">
+          <div id="resultEmpty" class="empty">
+            Nothing scanned yet. Every scan shows the bin, the reason, a confidence bar and the raw model predictions so you can check the machine's work.
+          </div>
+
+          <div id="resultSkeleton" hidden>
+            <div class="skeleton sk-line" style="width:45%"></div>
+            <div class="skeleton" style="height:78px;border-radius:var(--radius);margin-bottom:var(--space-4)"></div>
+            <div class="skeleton sk-line" style="width:90%"></div>
+            <div class="skeleton sk-line" style="width:70%"></div>
+          </div>
+
+          <div id="resultBody" hidden>
+            <div class="verdict" id="verdict">
+              <div class="verdict__bin">
+                <span class="bin-dot" id="binDot" aria-hidden="true"></span>
+                <div style="min-width:0">
+                  <div class="verdict__title" id="binName">—</div>
+                  <div class="verdict__item" id="itemName">—</div>
+                </div>
+              </div>
+              <p class="verdict__why" id="binWhy"></p>
+              <div>
+                <div class="bar-row__top" style="margin-bottom:var(--space-2)">
+                  <span class="muted">Model confidence</span>
+                  <span class="num" id="confValue" style="font-weight:600">0%</span>
+                </div>
+                <div class="conf"><div class="conf__fill" id="confFill" style="width:0%"></div></div>
+              </div>
+            </div>
+
+            <div>
+              <p class="label" style="margin-bottom:var(--space-2)">Raw model output (top 3)</p>
+              <div class="guesses" id="guesses"></div>
+            </div>
+
+            <div id="correctBlock">
+              <p class="label" style="margin-bottom:var(--space-2)" id="correctLabel">Wrong bin? Tap the right one</p>
+              <div class="pill-row" id="categoryPills"></div>
+            </div>
+
+            <button class="btn btn--primary btn--block" id="btnConfirm" type="button">Confirm &amp; earn credits</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="label" style="margin-bottom:var(--space-3)">Training data contributed</p>
+          <p class="muted" id="contribText">No corrections yet. When you correct a bin, that label is queued as anonymised training data to improve the next model version.</p>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+    <h2>The five bins, and what goes in them</h2>
+    <div class="grid--bins" id="binGuide" style="margin-top:var(--space-4)"></div>
+  </section>
+
+  <!-- ===================================================== GREEN CREDITS -->
+  <section class="view" id="view-credits" role="tabpanel" aria-labelledby="tab-credits" tabindex="0" hidden>
+    <div class="view__head">
+      <h1>Green Credits</h1>
+      <p>Correct segregation earns credits that convert into real municipal benefits. Accuracy is measured against the bin you finally confirm, not the model's first guess.</p>
+    </div>
+
+    <div class="grid grid--4">
+      <div class="card kpi"><span class="kpi__label">Credit balance</span><span class="kpi__value num" id="kpiCredits">0</span><span class="kpi__delta" id="kpiCreditsDelta">Scan an item to start earning</span></div>
+      <div class="card kpi"><span class="kpi__label">Day streak</span><span class="kpi__value num" id="kpiStreak">0</span><span class="kpi__delta">Streak bonus at 3+ scans</span></div>
+      <div class="card kpi"><span class="kpi__label">Household accuracy</span><span class="kpi__value num" id="kpiAccuracy">—</span><span class="kpi__delta" id="kpiAccuracyNote">No scans recorded</span></div>
+      <div class="card kpi"><span class="kpi__label">Items segregated</span><span class="kpi__value num" id="kpiScans">0</span><span class="kpi__delta" id="kpiScansNote">Lifetime confirmed scans</span></div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="grid grid--2">
+      <div class="card">
+        <h2>Ward 14 leaderboard</h2>
+        <p class="muted" style="margin:var(--space-2) 0 var(--space-4)">Household ranking by credits earned this month.</p>
+        <div class="rows" id="leaderboard"></div>
+      </div>
+
+      <div class="card">
+        <h2>Redeem credits</h2>
+        <p class="muted" style="margin:var(--space-2) 0 var(--space-4)">Redemptions are settled by the urban local body against your property-tax account.</p>
+        <div class="rows" id="rewards"></div>
+        <p class="note" style="margin-top:var(--space-4)">Prototype: redemption writes to in-memory state only. Production settles through the ULB revenue module.</p>
+        <div style="margin-top:var(--space-4)">
+          <p class="label" style="margin-bottom:var(--space-2)">Redemption history</p>
+          <div id="redemptions"><p class="muted">No redemptions yet.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== VERIFIED CLEAN -->
+  <section class="view" id="view-clean" role="tabpanel" aria-labelledby="tab-clean" tabindex="0" hidden>
+    <div class="view__head">
+      <h1>Verified Clean</h1>
+      <p>Every public toilet and community bin carries a QR code. Citizens rate it, complaints run on an SLA clock, and a closure is only accepted with an "after" photo that actually differs from the "before" photo.</p>
+    </div>
+
+    <div class="grid grid--2">
+      <div class="card">
+        <h2>Rate an asset</h2>
+        <div class="stack" style="margin-top:var(--space-4)">
+          <div class="scan-actions" style="margin-top:0">
+            <button class="btn btn--primary" id="btnScanQR" type="button">Scan QR code</button>
+          </div>
+          <label class="field">Or pick the asset manually
+            <select id="assetSelect"></select>
+          </label>
+          <div id="assetCard" class="verdict" hidden>
+            <div class="row__title" id="assetTitle">—</div>
+            <div class="row__sub" id="assetMeta">—</div>
+          </div>
+          <div>
+            <p class="label" style="margin-bottom:var(--space-2)">Cleanliness rating</p>
+            <div class="stars" id="stars" role="radiogroup" aria-label="Cleanliness rating out of 5"></div>
+            <p class="muted" id="ratingHint" style="margin-top:var(--space-2)">Tap a star from 1 (filthy) to 5 (spotless).</p>
+          </div>
+          <label class="field">Note for the sanitation team (optional)
+            <textarea id="complaintNote" rows="3" placeholder="Overflowing bin, waste spilling on the footpath"></textarea>
+          </label>
+          <label class="field">Before photo (optional but speeds up closure)
+            <input type="file" id="beforePhoto" accept="image/*">
+          </label>
+          <div id="beforePreviewWrap" hidden>
+            <img id="beforePreview" alt="Before photo of the reported asset" style="border-radius:var(--radius-sm);max-height:150px;object-fit:cover;width:100%">
+          </div>
+          <button class="btn btn--primary btn--block" id="btnFileComplaint" type="button">File complaint</button>
+          <p class="note">SLA is 24 hours for bins and 12 hours for public toilets. The clock starts the moment the complaint is filed.</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Complaints</h2>
+        <p class="muted" style="margin:var(--space-2) 0 var(--space-4)">SLA countdowns tick live. Escalation rises one level each time the SLA window is breached.</p>
+        <div class="rows" id="complaintList"></div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <h2>Asset register</h2>
+    <div class="rows" id="assetList" style="margin-top:var(--space-4)"></div>
+
+    <hr class="divider">
+
+    <h2>Safai Suraksha — worker safety</h2>
+    <p class="muted" style="margin:var(--space-2) 0 var(--space-4)">Manual entry into a septic tank or sewer is prohibited without a gas check and supervisor sign-off. This module makes both auditable.</p>
+
+    <div class="grid grid--2">
+      <div class="sos">
+        <div>
+          <h3>Emergency alert</h3>
+          <p class="muted" style="margin-top:var(--space-2)">Sends the worker's live coordinates to the ward control room, the nearest response vehicle and the supervisor on duty.</p>
+        </div>
+        <button class="sos__btn" id="btnSOS" type="button">SOS — WORKER IN DANGER</button>
+        <div class="step-list">
+          <div class="step"><span class="step__n">1</span><span>Control room acknowledges within 60 seconds and locks the site as a no-entry zone.</span></div>
+          <div class="step"><span class="step__n">2</span><span>Nearest response vehicle with breathing apparatus is dispatched to the coordinates.</span></div>
+          <div class="step"><span class="step__n">3</span><span>Supervisor files an incident report; the asset is flagged for a mechanised-cleaning audit.</span></div>
+        </div>
+        <div id="sosLog"><p class="muted">No alerts raised in this session.</p></div>
+      </div>
+
+      <div class="card">
+        <h3>Hazardous-entry log</h3>
+        <div class="stack" style="margin-top:var(--space-4)">
+          <label class="field">Worker ID
+            <input type="text" id="workerId" placeholder="SW-1407" autocomplete="off">
+          </label>
+          <label class="field">Asset
+            <select id="entryAsset"></select>
+          </label>
+          <label class="field">Gas check completed
+            <select id="gasCheck">
+              <option value="yes">Yes — atmosphere cleared</option>
+              <option value="no">No — not performed</option>
+            </select>
+          </label>
+          <button class="btn btn--primary btn--block" id="btnLogEntry" type="button">Record entry</button>
+        </div>
+        <div style="margin-top:var(--space-5)">
+          <p class="label" style="margin-bottom:var(--space-3)">Audit table</p>
+          <div class="table-wrap">
+            <table class="tbl" id="entryTable">
+              <thead><tr><th>Time</th><th>Worker</th><th>Asset</th><th>Gas check</th><th>Status</th></tr></thead>
+              <tbody id="entryBody"></tbody>
+            </table>
+          </div>
+          <p class="muted" id="entryEmpty" style="margin-top:var(--space-3)">No entries recorded in this session.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================== WARD COMMAND -->
+  <section class="view" id="view-ward" role="tabpanel" aria-labelledby="tab-ward" tabindex="0" hidden>
+    <div class="view__head">
+      <h1>Ward Command</h1>
+      <p>The officer view is fed by the same in-memory store as the citizen tabs. Scan an item or file a complaint and these numbers move immediately — that live loop from household to control room is the point of the system.</p>
+    </div>
+
+    <div class="grid grid--4">
+      <div class="card kpi"><span class="kpi__label">Segregation compliance</span><span class="kpi__value num" id="wKpiCompliance">—</span><span class="kpi__delta" id="wKpiComplianceNote">Target 60%</span></div>
+      <div class="card kpi"><span class="kpi__label">Scans today</span><span class="kpi__value num" id="wKpiScans">0</span><span class="kpi__delta" id="wKpiScansNote">Ward-wide, live</span></div>
+      <div class="card kpi"><span class="kpi__label">Open complaints</span><span class="kpi__value num" id="wKpiOpen">0</span><span class="kpi__delta" id="wKpiOpenNote">Includes awaiting verification</span></div>
+      <div class="card kpi"><span class="kpi__label">SLA breaches</span><span class="kpi__value num" id="wKpiBreach">0</span><span class="kpi__delta kpi__delta--down" id="wKpiBreachNote">Escalated to zonal officer</span></div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="grid grid--2">
+      <div class="card">
+        <h2>Segregation rate by ward</h2>
+        <p class="muted" style="margin:var(--space-2) 0 var(--space-5)">Green bars meet or beat the 60% state target; amber bars are below it.</p>
+        <div id="wardBars"></div>
+      </div>
+      <div class="card">
+        <h2>14-day segregation trend</h2>
+        <p class="muted" style="margin:var(--space-2) 0 var(--space-4)">Ward 14 daily segregation rate, percent of households compliant.</p>
+        <div style="position:relative;height:260px"><canvas id="trendChart" aria-label="Line chart of the 14-day segregation rate for Ward 14"></canvas></div>
+        <p class="muted" id="chartFallback" hidden>Chart library unavailable offline. Latest 14 values: <span id="chartFallbackData"></span></p>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <div class="grid grid--2">
+      <div class="card">
+        <h2>Hotspots</h2>
+        <p class="muted" style="margin:var(--space-2) 0 var(--space-4)">Locations with repeat dumping or overflow reports in the last seven days.</p>
+        <div class="rows" id="hotspots"></div>
+      </div>
+      <div class="card">
+        <h2>Complaint queue</h2>
+        <p class="muted" style="margin:var(--space-2) 0 var(--space-4)">Officer action: request photographic verification from the field crew.</p>
+        <div class="rows" id="officerQueue"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>BinCoach — prototype built for Smart India Hackathon 2026. Classification runs on-device with TensorFlow.js, so photos never leave the phone. Ward figures, leaderboard households and asset records are seeded demo data; closure verification is a prototype pixel-difference heuristic, not a trained model.</p>
+</footer>
+
+<div class="toast-host" id="toastHost" aria-live="polite" aria-atomic="false"></div>
+<canvas id="workCanvas" class="sr" width="224" height="224"></canvas>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="app.js"></script>
+<script data-pplx-inline-edit>
+(function () {
+  if (window === window.top) return;
+
+  const allowedParentOrigins = ["https://www.perplexity.ai","https://perplexity.ai","https://testing.perplexity.ai","https://staging.perplexity.ai","https://*.preview.i.perplexity.ai","http://perplexity.localhost","http://localhost:1420","http://127.0.0.1:1420","http://localhost:3000","http://127.0.0.1:3000","http://localhost:5173","http://127.0.0.1:5173"];
+  const MAX_FONT_BYTES = 500 * 1024;
+  const MAX_TOTAL_FONT_BYTES = 2 * 1024 * 1024;
+  let scrollForwarding = false;
+  let scrollRaf = 0;
+  let trustedTopOrigin = null;
+
+  // Allow entries like "https://*.preview.i.perplexity.ai" — the wildcard
+  // matches a single DNS label (no dots), so "https://*.foo" cannot stretch
+  // across multiple labels.
+  function matchesAllowedOrigin(origin) {
+    if (!origin) return false;
+    for (const entry of allowedParentOrigins) {
+      if (!entry.includes("*")) {
+        if (entry === origin) return true;
+        continue;
+      }
+      const pattern = new RegExp(
+        "^" +
+          entry.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace(/\*/g, "[^.]+") +
+          "$",
+      );
+      if (pattern.test(origin)) return true;
+    }
+    return false;
+  }
+
+  // Trust decision: when the sender is same-origin-visible (event.origin is a
+  // real origin like https://www.perplexity.ai) we trust event.origin directly.
+  // When event.origin is "null" (opaque broker srcdoc), we fall back to the
+  // broker's stamped `parentOrigin` to identify the top window. The fallback
+  // is claim-only — we rely on the browser's native `targetOrigin` enforcement
+  // on the response path (see postToTrustedTop) to ensure replies can't be
+  // delivered to anyone but the actual top window of that claimed origin.
+  function getTrustedParentOrigin(event) {
+    const forwardedParentOrigin =
+      typeof event.data.parentOrigin === "string" ? event.data.parentOrigin : null;
+    const parentOrigin = event.origin === "null" ? forwardedParentOrigin : event.origin;
+    return matchesAllowedOrigin(parentOrigin) ? parentOrigin : null;
+  }
+
+  // All responses go to window.top with targetOrigin = the allowlisted origin.
+  // An attacker that iframes us inside their own null-origin broker can claim
+  // any parentOrigin they like, but the browser will drop the reply whenever
+  // the real top's origin doesn't match — so the screenshot never leaves.
+  function postToTrustedTop(message) {
+    if (!trustedTopOrigin) return;
+    try {
+      window.top.postMessage(message, trustedTopOrigin);
+    } catch (_error) {}
+  }
+
+  function inlineAll(original, clone) {
+    if (original.nodeType !== 1 || clone.nodeType !== 1) return;
+
+    try {
+      const computedStyle = getComputedStyle(original);
+      // cssText on a computed style is the serialized declaration in modern
+      // Chromium/Safari — a single read beats enumerating ~400 longhand
+      // properties. Firefox returns "" here, so we fall back on empty.
+      const serialized = computedStyle.cssText;
+      if (serialized) {
+        clone.style.cssText = serialized;
+      } else {
+        const parts = new Array(computedStyle.length);
+        for (let index = 0; index < computedStyle.length; index += 1) {
+          const property = computedStyle[index];
+          parts[index] = `${property}:${computedStyle.getPropertyValue(property)};`;
+        }
+        clone.style.cssText = parts.join("");
+      }
+    } catch (_error) {}
+
+    const originalChildren = original.children;
+    const clonedChildren = clone.children;
+    for (
+      let index = 0;
+      index < originalChildren.length && index < clonedChildren.length;
+      index += 1
+    ) {
+      inlineAll(originalChildren[index], clonedChildren[index]);
+    }
+  }
+
+  function extractFontUrl(srcValue) {
+    const matches = [
+      ...srcValue.matchAll(
+        /url\(["']?([^"')]+)["']?\)(?:\s*format\(["']?([^"')]+)["']?\))?/gi,
+      ),
+    ];
+    if (matches.length === 0) return null;
+    const woff2 = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff2"));
+    if (woff2) return woff2[1];
+    const woff = matches.find((m) => m[2] && m[2].toLowerCase().includes("woff"));
+    if (woff) return woff[1];
+    return matches[0][1];
+  }
+
+  // Cache resolved font URL -> data URI across captures. Fonts on a page
+  // essentially never change, and a batch run emits multiple captures back to
+  // back — without this we'd refetch + re-base64 every time.
+  const fontDataUriCache = new Map();
+  const SRC_DECLARATION_RE = /src\s*:\s*[^;}]+/i;
+
+  async function fetchAsDataUri(url) {
+    if (fontDataUriCache.has(url)) return fontDataUriCache.get(url);
+    let dataUri = null;
+    try {
+      const response = await fetch(url, { mode: "cors", credentials: "omit" });
+      if (response.ok) {
+        const blob = await response.blob();
+        if (blob.size <= MAX_FONT_BYTES) {
+          dataUri = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () =>
+              resolve(typeof reader.result === "string" ? reader.result : null);
+            reader.onerror = () => resolve(null);
+            reader.readAsDataURL(blob);
+          });
+        }
+      }
+    } catch (_error) {
+      dataUri = null;
+    }
+    fontDataUriCache.set(url, dataUri);
+    return dataUri;
+  }
+
+  function collectFontFaceRuleTexts() {
+    const rules = [];
+    for (const sheet of document.styleSheets) {
+      let cssRules;
+      try {
+        cssRules = sheet.cssRules;
+      } catch (_error) {
+        continue;
+      }
+      if (!cssRules) continue;
+      for (const rule of cssRules) {
+        const cssText = rule.cssText || "";
+        if (cssText.startsWith("@font-face")) rules.push(cssText);
+      }
+    }
+    return rules;
+  }
+
+  async function buildInlinedFontCss() {
+    const ruleTexts = collectFontFaceRuleTexts();
+    if (ruleTexts.length === 0) return null;
+
+    const resolved = ruleTexts.map((cssText) => {
+      if (!SRC_DECLARATION_RE.test(cssText)) return null;
+      const srcMatch = cssText.match(/src\s*:\s*([^;}]+)[;}]/i);
+      if (!srcMatch) return null;
+      const url = extractFontUrl(srcMatch[1]);
+      if (!url) return null;
+      try {
+        return { cssText, url: new URL(url, document.baseURI).href };
+      } catch (_error) {
+        return null;
+      }
+    });
+
+    const dataUris = await Promise.all(
+      resolved.map((entry) => (entry ? fetchAsDataUri(entry.url) : Promise.resolve(null))),
+    );
+
+    const inlined = [];
+    let totalBytes = 0;
+    for (let index = 0; index < resolved.length; index += 1) {
+      const entry = resolved[index];
+      const dataUri = dataUris[index];
+      if (!entry || !dataUri) continue;
+      const approxBytes = dataUri.length * 0.75;
+      if (totalBytes + approxBytes > MAX_TOTAL_FONT_BYTES) break;
+      totalBytes += approxBytes;
+      inlined.push(entry.cssText.replace(SRC_DECLARATION_RE, `src: url("${dataUri}")`));
+    }
+    return inlined.length > 0 ? inlined.join("\n") : null;
+  }
+
+  function stripExternal(clone) {
+    const images = clone.querySelectorAll("img");
+    for (let index = 0; index < images.length; index += 1) {
+      const src = images[index].getAttribute("src");
+      if (src && !src.startsWith("data:")) images[index].removeAttribute("src");
+    }
+
+    const elements = clone.querySelectorAll("*");
+    for (let index = 0; index < elements.length; index += 1) {
+      const style = elements[index].style.cssText;
+      if (style && style.includes("url(")) {
+        elements[index].style.cssText = style.replace(
+          /url\(["']?(?!data:)[^)"']*["']?\)/gi,
+          "none",
+        );
+      }
+    }
+  }
+
+  function emitScroll() {
+    scrollRaf = 0;
+    if (!scrollForwarding) return;
+    postToTrustedTop({
+      type: "INLINE_EDIT_SCROLL",
+      scrollX: window.scrollX,
+      scrollY: window.scrollY,
+    });
+  }
+
+  window.addEventListener(
+    "scroll",
+    function () {
+      if (!scrollForwarding || scrollRaf) return;
+      scrollRaf = requestAnimationFrame(emitScroll);
+    },
+    { passive: true, capture: true },
+  );
+
+  async function handleCaptureRequest(event) {
+    const requestId = event.data.requestId;
+    const scrollX = window.scrollX;
+    const scrollY = window.scrollY;
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+
+    function postResult(dataUrl) {
+      postToTrustedTop({
+        type: "INLINE_EDIT_SCREENSHOT_RESULT",
+        requestId,
+        dataUrl,
+        scrollX,
+        scrollY,
+      });
+    }
+
+    try {
+      // Wait for any pending web fonts to resolve so both inline metrics and
+      // the @font-face inlining below see the same loaded faces.
+      if (document.fonts && document.fonts.ready) {
+        try {
+          await document.fonts.ready;
+        } catch (_error) {}
+      }
+
+      const clone = document.documentElement.cloneNode(true);
+      inlineAll(document.documentElement, clone);
+
+      const removedNodes = clone.querySelectorAll("script,link[rel=\"stylesheet\"],style");
+      for (let index = 0; index < removedNodes.length; index += 1) {
+        removedNodes[index].remove();
+      }
+
+      stripExternal(clone);
+
+      // Re-embed web fonts as data-URI @font-face rules so the SVG rasterizer
+      // can resolve them — external font URLs aren't fetched during
+      // foreignObject rendering, which would otherwise force a fallback face
+      // and change text metrics.
+      const inlinedFontCss = await buildInlinedFontCss();
+      if (inlinedFontCss) {
+        const styleEl = document.createElement("style");
+        styleEl.textContent = inlinedFontCss;
+        const head = clone.querySelector("head");
+        if (head) head.appendChild(styleEl);
+        else clone.insertBefore(styleEl, clone.firstChild);
+      }
+
+      const html = new XMLSerializer().serializeToString(clone);
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">` +
+        '<foreignObject width="100%" height="100%">' +
+        `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${width}px;height:${height}px;overflow:hidden">` +
+        `<div style="position:relative;left:-${scrollX}px;top:-${scrollY}px">` +
+        html +
+        "</div></div></foreignObject></svg>";
+      const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      const image = new Image();
+      image.onload = function () {
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext("2d").drawImage(image, 0, 0);
+        postResult(canvas.toDataURL("image/png"));
+      };
+      image.onerror = function () {
+        postResult(null);
+      };
+      image.src = svgUrl;
+    } catch (_error) {
+      postResult(null);
+    }
+  }
+
+  window.addEventListener("message", function (event) {
+    if (!event.data) return;
+    // Only accept messages from the direct parent frame. Blocks sibling /
+    // unrelated-window postMessage senders that could otherwise reach us.
+    if (event.source !== window.parent) return;
+
+    const trustedParentOrigin = getTrustedParentOrigin(event);
+    if (!trustedParentOrigin) return;
+    trustedTopOrigin = trustedParentOrigin;
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_START") {
+      scrollForwarding = true;
+      emitScroll();
+      return;
+    }
+
+    if (event.data.type === "INLINE_EDIT_SCROLL_STOP") {
+      scrollForwarding = false;
+      if (scrollRaf) cancelAnimationFrame(scrollRaf);
+      scrollRaf = 0;
+      return;
+    }
+
+    if (event.data.type !== "INLINE_EDIT_CAPTURE_REQUEST") return;
+
+    handleCaptureRequest(event);
+  });
+})();
+
+
+</script></body>
+</html>
